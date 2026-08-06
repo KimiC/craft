@@ -2,8 +2,9 @@
 
 Browser-based voxel sandbox game built with TypeScript, Three.js, and Vite.
 
-## Features (MVP)
+> Demo for [KimiC](https://github.com/KimiC) — play at http://craft.rafter.com.cn/
 
+## Features (MVP)
 - First-person movement (WASD + jump)
 - Pointer Lock mouse look
 - Procedural terrain (Simplex noise)
