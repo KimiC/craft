@@ -1,0 +1,26 @@
+# Example nginx config for rafter.com.cn/voxel/
+# Place dist/ contents at /var/www/rafter.com.cn/voxel/
+
+location /voxel/ {
+    alias /var/www/rafter.com.cn/voxel/;
+    index index.html;
+    try_files $uri $uri/ /voxel/index.html;
+
+    # Cache hashed assets
+    location ~* /voxel/assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# Optional: gzip compression
+gzip on;
+gzip_types text/plain text/css application/javascript application/json;
+gzip_min_length 256;
+
+# Recommended: HTTPS for Pointer Lock API
+# server {
+#     listen 443 ssl;
+#     server_name rafter.com.cn;
+#     ...
+# }
