@@ -24,7 +24,12 @@ npm run build
 
 echo "==> Publish to $WEB_ROOT"
 sudo mkdir -p "$WEB_ROOT"
-sudo rsync -av --delete dist/ "$WEB_ROOT/"
+if command -v rsync >/dev/null 2>&1; then
+  sudo rsync -av --delete dist/ "$WEB_ROOT/"
+else
+  sudo rm -rf "${WEB_ROOT:?}"/*
+  sudo cp -r dist/* "$WEB_ROOT/"
+fi
 sudo chown -R nginx:nginx "$WEB_ROOT"
 sudo chmod -R 755 "$WEB_ROOT"
 
