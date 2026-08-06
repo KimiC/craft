@@ -130,12 +130,40 @@ The script pulls git, runs `npm ci`, `npm run build`, and copies `dist/` to `/va
 
 Access: **http://craft.rafter.com.cn/**
 
-### HTTPS (optional)
+### HTTPS (recommended for mobile Pointer Lock)
+
+**Before running:** Aliyun ECS security group must allow **TCP 443** inbound.
+
+On the server:
 
 ```bash
+cd ~/craft
+git pull origin main
+chmod +x deploy/setup-https.sh
+
+# Optional: use your email for Let's Encrypt notices
+export EMAIL=you@example.com
+bash deploy/setup-https.sh
+```
+
+Or manually:
+
+```bash
+sudo yum install -y epel-release
 sudo yum install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d craft.rafter.com.cn
 ```
+
+Certbot will edit nginx, obtain a certificate, and set up HTTP→HTTPS redirect.
+
+Verify:
+
+```bash
+curl -I https://craft.rafter.com.cn/
+sudo certbot renew --dry-run
+```
+
+Access: **https://craft.rafter.com.cn/**
 
 ## Architecture
 
