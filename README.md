@@ -16,6 +16,8 @@ Browser-based voxel sandbox game built with TypeScript, Three.js, and Vite.
 
 ## Controls
 
+### Desktop
+
 | Key | Action |
 |-----|--------|
 | WASD | Move |
@@ -24,6 +26,34 @@ Browser-based voxel sandbox game built with TypeScript, Three.js, and Vite.
 | Left click | Break block |
 | Right click | Place block |
 | 1-9 | Select block type |
+
+### Mobile (phone / tablet)
+
+| Control | Action |
+|---------|--------|
+| Left joystick | Move |
+| Drag right side of screen | Look around |
+| Break / Place / Jump buttons | Actions |
+| Tap hotbar slot | Select block |
+
+Play on phone: http://craft.rafter.com.cn/
+
+## Getting started for KimiC
+
+1. Accept the GitHub collaborator invite (email from GitHub)
+2. Install [Git](https://git-scm.com/) and [Node.js](https://nodejs.org/)
+3. Clone and run:
+
+```bash
+git clone https://github.com/Raft-chen/craft.git
+cd craft
+npm install
+npm run dev
+```
+
+4. Open http://localhost:5173/ in your browser
+5. Live game: http://craft.rafter.com.cn/
+6. After changes: `git add .` → `git commit -m "message"` → `git push`
 
 ## Development
 
@@ -42,54 +72,70 @@ npm run build
 
 Output in `dist/` — deploy to web server root.
 
-## Deploy to craft.rafter.com.cn
+## Deploy to craft.rafter.com.cn (Git)
 
-### 1. DNS
+### One-time server setup
 
-Add an **A record** at your domain registrar:
-
-| Type | Host | Value |
-|------|------|-------|
-| A | craft | `<your-server-IP>` |
-
-Verify: `ping craft.rafter.com.cn` should resolve to your server IP.
-
-### 2. Server nginx config
-
-Copy [deploy/nginx.craft.conf.example](deploy/nginx.craft.conf.example) to your server:
+SSH into ECS (web terminal or `ssh admin@47.82.233.199`), then:
 
 ```bash
-sudo cp deploy/nginx.craft.conf.example /etc/nginx/sites-available/craft.rafter.com.cn
-sudo ln -sf /etc/nginx/sites-available/craft.rafter.com.cn /etc/nginx/sites-enabled/
-sudo mkdir -p /var/www/craft.rafter.com.cn
-sudo nginx -t && sudo systemctl reload nginx
+# Install Node.js 20 if needed (Aliyun Linux / CentOS)
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo yum install -y nodejs git
+
+# Clone and first deploy
+git clone https://github.com/Raft-chen/craft.git ~/craft
+cd ~/craft
+chmod +x deploy/setup-server.sh deploy/deploy.sh
+bash deploy/setup-server.sh
 ```
 
-### 3. Upload build
+Ensure nginx is configured — see [deploy/nginx.craft.conf.example](deploy/nginx.craft.conf.example)  
+(Aliyun Linux uses `/etc/nginx/conf.d/craft.rafter.com.cn.conf`)
 
-**PowerShell (Windows):**
+### Every update (your workflow)
+
+**On your PC** — commit and push:
 
 ```powershell
 cd C:\fw\Turin_BIOS_code\rafter-voxel
-.\deploy\deploy.ps1 -Server user@your-server
+git add .
+git commit -m "Describe your change"
+git push
 ```
 
-**Manual (Linux/macOS):**
+**Deploy to server** — either:
 
-```bash
-npm run build
-rsync -avz --delete dist/ user@your-server:/var/www/craft.rafter.com.cn/
+```powershell
+# Option A: from PC, trigger remote build
+npm run deploy
+# or
+.\deploy\deploy.ps1
 ```
 
-### 4. HTTPS (recommended)
+```bash
+# Option B: on the server directly
+cd ~/craft
+git pull origin main
+bash deploy/deploy.sh
+```
 
-Pointer Lock API works best over HTTPS:
+The script pulls git, runs `npm ci`, `npm run build`, and copies `dist/` to `/var/www/craft.rafter.com.cn/`.
+
+### DNS
+
+| Type | Host | Value |
+|------|------|-------|
+| A | craft | your server public IP |
+
+Access: **http://craft.rafter.com.cn/**
+
+### HTTPS (optional)
 
 ```bash
+sudo yum install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d craft.rafter.com.cn
 ```
-
-Access at: **http://craft.rafter.com.cn/** (or https after certbot)
 
 ## Architecture
 

@@ -1,5 +1,6 @@
 import { FPCamera } from './Camera';
 import { InputManager } from './InputManager';
+import { TouchControls } from './TouchControls';
 import { ChunkManager } from '../world/ChunkManager';
 import { raycastVoxel } from '../world/Raycast';
 import { BlockId, PLACEABLE_BLOCKS, RENDER_DISTANCE, getBlock } from '../world/BlockRegistry';
@@ -12,6 +13,7 @@ import { SaveManager } from '../save/SaveManager';
 export class Game {
   private renderer: Renderer;
   private input: InputManager;
+  private touch: TouchControls | null = null;
   private fpCamera: FPCamera;
   private world: ChunkManager;
   private meshManager: ChunkMeshManager;
@@ -27,17 +29,20 @@ export class Game {
   private selectedSlot = 0;
   private saveTimer = 0;
   private readonly SAVE_INTERVAL = 30;
+  private renderDistance = RENDER_DISTANCE;
 
   private overlay: HTMLElement;
   private hud: HTMLElement;
   private infoEl: HTMLElement;
   private hotbarEl: HTMLElement;
+  private mobileControls: HTMLElement;
 
   constructor(canvas: HTMLCanvasElement) {
     this.overlay = document.getElementById('overlay')!;
     this.hud = document.getElementById('hud')!;
     this.infoEl = document.getElementById('info')!;
     this.hotbarEl = document.getElementById('hotbar')!;
+    this.mobileControls = document.getElementById('mobile-controls')!;
 
     this.renderer = new Renderer(canvas);
     this.input = new InputManager(canvas);
@@ -48,7 +53,23 @@ export class Game {
     this.player = new Player(this.world);
     this.saveManager = new SaveManager();
 
+    if (this.input.mobile) {
+      this.renderDistance = 4;
+      this.mobileControls.classList.remove('hidden');
+      document.body.classList.add('mobile');
+      const hint = document.getElementById('overlay-hint')!;
+      hint.textContent = 'Tap to start · Left stick move · Right side look · Buttons: break / place / jump';
+    }
+
     this.buildHotbar();
+
+    if (this.input.mobile) {
+      this.touch = new TouchControls(this.mobileControls, (i) => {
+        this.selectedSlot = i;
+        this.updateHotbarSelection();
+      });
+    }
+
     document.getElementById('start-btn')!.addEventListener('click', () => this.start());
   }
 
@@ -86,13 +107,19 @@ export class Game {
       this.world.loadFromSaved(saved.chunks);
       this.player.position.set(saved.playerPos.x, saved.playerPos.y, saved.playerPos.z);
     } else {
-      this.world.loadChunksAround(8, 8, RENDER_DISTANCE);
+      this.world.loadChunksAround(8, 8, this.renderDistance);
     }
 
     this.rebuildAllMeshes();
     this.overlay.classList.add('hidden');
     this.hud.classList.remove('hidden');
-    this.input.requestPointerLock();
+
+    if (this.input.mobile) {
+      this.input.setMobileActive(true);
+    } else {
+      this.input.requestPointerLock();
+    }
+
     this.running = true;
     this.lastTime = performance.now();
     requestAnimationFrame((t) => this.loop(t));
@@ -126,32 +153,57 @@ export class Game {
   }
 
   private update(dt: number): void {
-    if (!this.input.mouseLocked) return;
+    if (!this.input.isGameActive()) return;
 
-    const { dx, dy } = this.input.consumeMouseDelta();
-    this.fpCamera.applyMouseDelta(dx, dy);
+    let forward = false;
+    let back = false;
+    let left = false;
+    let right = false;
+    let jump = false;
+    let lookDx = 0;
+    let lookDy = 0;
+    let breakBlock = false;
+    let placeBlock = false;
 
-    for (let i = 0; i < 9 && i < PLACEABLE_BLOCKS.length; i++) {
-      if (this.input.isDown(`Digit${i + 1}`)) {
-        this.selectedSlot = i;
-        this.updateHotbarSelection();
+    if (this.input.mobile && this.touch) {
+      const t = this.touch.consume();
+      lookDx = t.lookDx;
+      lookDy = t.lookDy;
+      forward = t.moveZ < -0.2;
+      back = t.moveZ > 0.2;
+      left = t.moveX < -0.2;
+      right = t.moveX > 0.2;
+      jump = t.jumpPressed;
+      breakBlock = t.breakPressed;
+      placeBlock = t.placePressed;
+    } else {
+      const delta = this.input.consumeMouseDelta();
+      lookDx = delta.dx;
+      lookDy = delta.dy;
+      forward = this.input.isDown('KeyW');
+      back = this.input.isDown('KeyS');
+      left = this.input.isDown('KeyA');
+      right = this.input.isDown('KeyD');
+      jump = this.input.isDown('Space');
+      breakBlock = this.input.mouseLeftPressed;
+      placeBlock = this.input.mouseRightPressed;
+    }
+
+    this.fpCamera.applyMouseDelta(lookDx, lookDy);
+
+    if (!this.input.mobile) {
+      for (let i = 0; i < 9 && i < PLACEABLE_BLOCKS.length; i++) {
+        if (this.input.isDown(`Digit${i + 1}`)) {
+          this.selectedSlot = i;
+          this.updateHotbarSelection();
+        }
       }
     }
 
-    this.player.update(
-      {
-        forward: this.input.isDown('KeyW'),
-        back: this.input.isDown('KeyS'),
-        left: this.input.isDown('KeyA'),
-        right: this.input.isDown('KeyD'),
-        jump: this.input.isDown('Space'),
-      },
-      dt,
-      this.fpCamera.yaw,
-    );
+    this.player.update({ forward, back, left, right, jump }, dt, this.fpCamera.yaw);
 
-    this.world.loadChunksAround(this.player.position.x, this.player.position.z, RENDER_DISTANCE);
-    const removed = this.world.unloadDistantChunks(this.player.position.x, this.player.position.z, RENDER_DISTANCE);
+    this.world.loadChunksAround(this.player.position.x, this.player.position.z, this.renderDistance);
+    const removed = this.world.unloadDistantChunks(this.player.position.x, this.player.position.z, this.renderDistance);
     for (const key of removed) {
       this.meshManager.removeChunk(key);
     }
@@ -164,7 +216,7 @@ export class Game {
     const eye = this.player.getEyePosition();
     this.fpCamera.applyToCamera(this.renderer.camera, eye);
 
-    this.handleBlockInteraction(eye);
+    this.handleBlockInteraction(eye, breakBlock, placeBlock);
 
     this.saveTimer += dt;
     if (this.saveTimer >= this.SAVE_INTERVAL) {
@@ -179,15 +231,19 @@ export class Game {
     this.updateHud();
   }
 
-  private handleBlockInteraction(eye: { x: number; y: number; z: number }): void {
+  private handleBlockInteraction(
+    eye: { x: number; y: number; z: number },
+    breakBlock: boolean,
+    placeBlock: boolean,
+  ): void {
     const dir = this.fpCamera.getForward();
     const hit = raycastVoxel(eye, dir, this.world);
 
-    if (this.input.mouseLeftPressed && hit) {
+    if (breakBlock && hit) {
       this.world.applyBlockChange(hit.x, hit.y, hit.z, BlockId.Air);
     }
 
-    if (this.input.mouseRightPressed && hit) {
+    if (placeBlock && hit) {
       const px = hit.x + hit.nx;
       const py = hit.y + hit.ny;
       const pz = hit.z + hit.nz;

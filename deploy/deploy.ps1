@@ -1,20 +1,13 @@
-# Deploy to craft.rafter.com.cn
-# Usage: .\deploy.ps1 -Server user@your-server
+# Remote deploy via git (run from your PC after git push)
+# Usage: .\deploy.ps1 [-Server admin@47.82.233.199]
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$Server,
-    [string]$RemotePath = "/var/www/craft.rafter.com.cn/"
+    [string]$Server = "admin@47.82.233.199",
+    [string]$RepoDir = "~/craft"
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location (Join-Path $PSScriptRoot "..")
 
-Write-Host "Building..."
-npm run build
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "Uploading to ${Server}:${RemotePath}..."
-ssh $Server "mkdir -p $RemotePath"
-scp -r dist/* "${Server}:${RemotePath}"
+Write-Host "Deploying on $Server via git pull + build..."
+ssh $Server "cd $RepoDir && git pull origin main && bash deploy/deploy.sh"
 
 Write-Host "Done. Visit http://craft.rafter.com.cn/"

@@ -8,13 +8,16 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    const h = vv?.height ?? window.innerHeight;
+    this.renderer.setSize(w, h);
     this.renderer.setClearColor(0x87ceeb);
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0x87ceeb, 40, 90);
 
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 200);
     this.camera.rotation.order = 'YXZ';
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -25,12 +28,16 @@ export class Renderer {
     this.scene.add(sun);
 
     window.addEventListener('resize', () => this.onResize());
+    window.visualViewport?.addEventListener('resize', () => this.onResize());
+    window.visualViewport?.addEventListener('scroll', () => this.onResize());
   }
-
   private onResize(): void {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    const h = vv?.height ?? window.innerHeight;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(w, h);
   }
 
   render(): void {

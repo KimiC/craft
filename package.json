@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "ssh admin@47.82.233.199 \"cd ~/craft && git pull origin main && bash deploy/deploy.sh\""
   },
   "dependencies": {
     "simplex-noise": "^4.0.1",

@@ -7,6 +7,8 @@ export class InputManager {
   mouseRight = false;
   mouseLeftPressed = false;
   mouseRightPressed = false;
+  readonly mobile: boolean;
+  mobileActive = false;
 
   private canvas: HTMLCanvasElement;
   private prevMouseLeft = false;
@@ -14,6 +16,8 @@ export class InputManager {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.mobile = 'ontouchstart' in window &&
+      (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900);
 
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
@@ -47,7 +51,18 @@ export class InputManager {
   }
 
   requestPointerLock(): void {
-    this.canvas.requestPointerLock();
+    if (!this.mobile) {
+      this.canvas.requestPointerLock();
+    }
+  }
+
+  /** Desktop needs pointer lock; mobile uses touch controls */
+  isGameActive(): boolean {
+    return this.mobile ? this.mobileActive : this.mouseLocked;
+  }
+
+  setMobileActive(active: boolean): void {
+    this.mobileActive = active;
   }
 
   isDown(code: string): boolean {
