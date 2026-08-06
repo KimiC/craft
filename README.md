@@ -134,36 +134,36 @@ Access: **http://craft.rafter.com.cn/**
 
 **Before running:** Aliyun ECS security group must allow **TCP 443** inbound.
 
-On the server:
+On Aliyun Linux, `yum install certbot` often fails — use the script (tries pip, then acme.sh):
 
 ```bash
 cd ~/craft
+git checkout -- deploy/deploy.sh 2>/dev/null || true
 git pull origin main
 chmod +x deploy/setup-https.sh
 
-# Optional: use your email for Let's Encrypt notices
 export EMAIL=you@example.com
 bash deploy/setup-https.sh
 ```
 
-Or manually:
+**Manual fallback (pip):**
 
 ```bash
-sudo yum install -y epel-release
-sudo yum install -y certbot python3-certbot-nginx
+sudo yum install -y python3-pip
+sudo python3 -m pip install certbot certbot-nginx
 sudo certbot --nginx -d craft.rafter.com.cn
 ```
 
-Certbot will edit nginx, obtain a certificate, and set up HTTP→HTTPS redirect.
-
-Verify:
+**Manual fallback (acme.sh) — if pip also fails:**
 
 ```bash
-curl -I https://craft.rafter.com.cn/
-sudo certbot renew --dry-run
+curl https://get.acme.sh | sh -s email=you@example.com
+~/.acme.sh/acme.sh --issue -d craft.rafter.com.cn -w /var/www/craft.rafter.com.cn
 ```
 
-Access: **https://craft.rafter.com.cn/**
+Then follow acme.sh nginx install hints, or re-run `bash deploy/setup-https.sh`.
+
+Verify: `curl -I https://craft.rafter.com.cn/`
 
 ## Architecture
 
