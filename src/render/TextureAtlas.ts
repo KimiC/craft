@@ -68,22 +68,25 @@ const PAINTERS: Painter[] = [
   // 0 grass top
   (p) => {
     p.fill('#66b84f');
-    p.mottle(['#559e40', '#7ecb60', '#5aa845', '#74c25a'], 60);
+    // Fine grain with a narrow value range. Big colour patches read as stains
+    // ("blurry shapes"); wide-contrast speckle shimmers while you walk. Small
+    // dots whose shades are all within a few percent of the base do neither.
+    p.mottle(['#63b54d', '#69bb52', '#60b04a', '#6cbf55', '#65b74e'], 110);
   },
   // 1 dirt
   (p) => {
     p.fill('#8a6a46');
-    p.mottle(['#755631', '#9d7d55', '#7f6039', '#93714b'], 60);
+    p.mottle(['#876744', '#8d6d49', '#856442', '#906f4b'], 90);
   },
   // 2 grass side
   (p) => {
     p.fill('#8a6a46');
-    p.mottle(['#755631', '#9d7d55', '#7f6039'], 55);
+    p.mottle(['#876744', '#8d6d49', '#856442'], 70);
+    // Near-constant cap: the old 3px jagged edge aliased along every terrace.
     for (let x = 0; x < TILE; x++) {
-      const d = 8 + Math.floor(hash2(x, 1, 77) * 4);
-      p.rect(x, 0, 1, d, '#66b84f');
-      p.px(x, d - 1, hash2(x, 2, 91) > 0.5 ? '#559e40' : '#74c25a');
+      p.rect(x, 0, 1, hash2(x, 1, 77) > 0.5 ? 10 : 9, '#66b84f');
     }
+    p.rect(0, 9, TILE, 1, '#5fac49');
   },
   // 3 stone
   (p) => {

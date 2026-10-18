@@ -59,6 +59,14 @@ export const CONFIG = {
     masterVolume: 0.5,
   },
 
+  /** Rendering knobs */
+  video: {
+    /** Cap on the internal resolution multiplier (window.devicePixelRatio). */
+    pixelRatioCap: 2,
+    /** Vertical camera bob while walking, in blocks (0 disables it). */
+    cameraBob: 0.02,
+  },
+
   /** How water feels and looks */
   water: {
     /** Gravity multiplier while submerged (1 = normal, 0 = neutral buoyancy) */

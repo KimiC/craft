@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CONFIG } from '../config';
 
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
@@ -11,7 +12,7 @@ export class Renderer {
       antialias: false,
       powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.video.pixelRatioCap));
 
     const vv = window.visualViewport;
     const w = vv?.width ?? window.innerWidth;

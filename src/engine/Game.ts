@@ -531,7 +531,7 @@ export class Game {
 
     const eye = this.player.getEyePosition();
     if (this.player.onGround && !this.player.flying) {
-      eye.y += Math.sin(this.player.bobPhase * 2) * 0.04;
+      eye.y += Math.sin(this.player.bobPhase * 2) * CONFIG.video.cameraBob;
     }
     this.fpCamera.applyToCamera(this.renderer.camera, eye);
 
