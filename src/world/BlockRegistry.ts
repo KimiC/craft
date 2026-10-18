@@ -46,7 +46,7 @@ export const BLOCKS: Record<BlockId, BlockDef> = {
   [BlockId.Dirt]: { id: BlockId.Dirt, name: 'Dirt', solid: true, transparent: false, hardness: 0.4, textures: T(1) },
   [BlockId.Stone]: { id: BlockId.Stone, name: 'Stone', solid: true, transparent: false, hardness: 1.2, textures: T(3) },
   [BlockId.Sand]: { id: BlockId.Sand, name: 'Sand', solid: true, transparent: false, hardness: 0.35, textures: T(4) },
-  [BlockId.Water]: { id: BlockId.Water, name: 'Water', solid: false, transparent: true, hardness: 0, textures: T(5) },
+  [BlockId.Water]: { id: BlockId.Water, name: 'Water', solid: false, transparent: true, hardness: 0, textures: [5, 25, 25] },
   [BlockId.Wood]: { id: BlockId.Wood, name: 'Log', solid: true, transparent: false, hardness: 0.9, textures: [6, 6, 7] },
   [BlockId.Leaves]: { id: BlockId.Leaves, name: 'Leaves', solid: true, transparent: true, hardness: 0.2, textures: T(8) },
   [BlockId.Glass]: { id: BlockId.Glass, name: 'Glass', solid: true, transparent: true, hardness: 0.3, textures: T(9) },

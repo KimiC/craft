@@ -96,13 +96,18 @@ const PAINTERS: Painter[] = [
     p.fill('#e0cf92');
     p.mottle(['#cbb877', '#f0e3b0', '#d6c485'], 60);
   },
-  // 5 water
+  // 5 water top
   (p) => {
-    p.fill('#3b7ddb', 0.7);
-    for (let y = 2; y < TILE; y += 5) {
-      p.rect(0, y, TILE, 1, '#5b9aee');
+    p.fill('#3f7fd0', 0.78);
+    // darker rim per tile: without it the surface reads as one continuous
+    // translucent film instead of a grid of cubes
+    p.rect(0, 0, TILE, 1, '#2c5ea8');
+    p.rect(0, 0, 1, TILE, '#2c5ea8');
+    p.rect(0, TILE - 1, TILE, 1, '#2c5ea8');
+    p.rect(TILE - 1, 0, 1, TILE, '#2c5ea8');
+    for (let i = 0; i < 7; i++) {
+      p.px(2 + Math.floor(hash2(i, 7, 5) * 12), 2 + Math.floor(hash2(i, 9, 5) * 12), '#6aa4ec');
     }
-    p.mottle(['#5b9aee', '#2f68c0'], 18, 300);
   },
   // 6 log top
   (p) => {
@@ -270,6 +275,16 @@ const PAINTERS: Painter[] = [
     p.fill('#241f33');
     p.mottle(['#181426', '#463f5c', '#2e2743'], 55, 1950);
     p.blobs('#463f5c', '#6a5f8a', 3, 2000);
+  },
+  // 25 water side — a darker shade than the surface, so a body of water has
+  // visible depth at the shoreline instead of looking like a painted plane
+  (p) => {
+    p.fill('#2f63b8', 0.82);
+    p.rect(0, 0, TILE, 1, '#254f92');
+    p.rect(0, 0, 1, TILE, '#254f92');
+    p.rect(0, TILE - 1, TILE, 1, '#254f92');
+    p.rect(TILE - 1, 0, 1, TILE, '#254f92');
+    for (let y = 3; y < TILE - 2; y += 4) p.rect(2, y, TILE - 4, 1, '#3f79cc');
   },
 ];
 
