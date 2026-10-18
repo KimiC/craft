@@ -59,6 +59,27 @@ export const CONFIG = {
     masterVolume: 0.5,
   },
 
+  /** How water feels and looks */
+  water: {
+    /** Gravity multiplier while submerged (1 = normal, 0 = neutral buoyancy) */
+    gravityFactor: 0.14,
+    /** Fastest you sink (m/s) */
+    sinkSpeed: 2.4,
+    /** Swim-up speed while holding jump (m/s) */
+    swimSpeed: 4.9,
+    /** Horizontal speed multiplier in water */
+    moveFactor: 0.55,
+    /** Fog distances while fully submerged (blocks) */
+    fogNear: 1,
+    fogFar: 15,
+    /** Colour of the underwater medium */
+    tint: '#1f5f9e',
+    /** Screen tint at the surface, per block of depth, and the cap */
+    overlayBase: 0.16,
+    overlayPerBlock: 0.015,
+    overlayMax: 0.5,
+  },
+
   /** The play loop */
   play: {
     /** How many glow-stars spawn per round */

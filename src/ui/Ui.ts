@@ -43,6 +43,7 @@ export class Ui {
   readonly hintbar = need('hintbar');
 
   private flashEl: HTMLDivElement;
+  private underwaterEl: HTMLDivElement;
   private slots: HTMLDivElement[] = [];
 
   constructor() {
@@ -50,6 +51,29 @@ export class Ui {
     this.flashEl.style.cssText =
       'position:fixed;inset:0;pointer-events:none;z-index:8;background:#fff;opacity:0;transition:opacity .35s ease;';
     document.body.appendChild(this.flashEl);
+
+    // The water medium you see while your eyes are under the surface: a soft
+    // vignette that gets stronger with depth. The scene fog does the distance
+    // work; this supplies the "I am inside something" tint.
+    this.underwaterEl = document.createElement('div');
+    this.underwaterEl.id = 'underwater';
+    this.underwaterEl.style.cssText = [
+      'position:fixed',
+      'inset:0',
+      'pointer-events:none',
+      'z-index:4',
+      'opacity:0',
+      'transition:opacity .22s linear',
+      'background:radial-gradient(ellipse at 50% 42%,rgba(105,190,245,0.55) 0%,rgba(32,104,176,0.78) 45%,rgba(5,28,58,0.96) 100%)',
+      'will-change:opacity',
+    ].join(';');
+    document.body.appendChild(this.underwaterEl);
+  }
+
+  /** 0 = dry, 1 = fully tinted; the game feeds it depth- and light-aware values. */
+  setUnderwater(strength: number): void {
+    const v = Math.max(0, Math.min(1, strength));
+    this.underwaterEl.style.opacity = v < 0.01 ? '0' : v.toFixed(3);
   }
 
   // ---------- screens ----------

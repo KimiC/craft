@@ -81,9 +81,20 @@ export class Game {
   private clock = 0;
   private suppressPause = false;
   private wasInWater = false;
+  /** 0 = eyes in air, 1 = eyes fully under water (smoothed). */
+  private underwater = 0;
+  private baseFogNear = 65;
+  private baseFogFar = 125;
+  private readonly tintColor = new THREE.Color();
+  private readonly clearColor = new THREE.Color();
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
+    const fog = this.renderer.scene.fog as THREE.Fog | null;
+    if (fog) {
+      this.baseFogNear = fog.near;
+      this.baseFogFar = fog.far;
+    }
     this.sky = new Sky(this.renderer.scene, this.renderer.renderer);
     this.input = new InputManager(canvas);
     this.fpCamera = new FPCamera();
@@ -516,6 +527,7 @@ export class Game {
     this.fpCamera.applyToCamera(this.renderer.camera, eye);
 
     this.sky.update(dt, this.renderer.camera);
+    this.updateUnderwater(dt, eye);
     this.handleInteraction(eye, breakHeld, placeHeld, dt);
     this.updateBooms(dt);
     this.stars.update(dt, this.clock);
@@ -568,8 +580,58 @@ export class Game {
     }
   }
 
-  private playFootsteps(dt: number, moving: boolean): void {
-    if (!moving || !this.player.onGround || this.player.flying) {
+  /**
+   * Water as a medium, not just a surface: when the camera sits inside a water
+   * block the fog closes in and takes the water colour, the clear colour
+   * follows, and a depth-aware tint is laid over the view. Everything eases in
+   * and out so crossing the surface is smooth rather than a hard cut.
+   */
+  private updateUnderwater(dt: number, eye: THREE.Vector3): void {
+    const W = CONFIG.water;
+    const bx = Math.floor(eye.x);
+    const bz = Math.floor(eye.z);
+    const by = Math.floor(eye.y);
+    const inside = this.world.getBlock(bx, by, bz) === BlockId.Water;
+
+    // How far below the surface the eye is (0 when dry).
+    let depth = 0;
+    if (inside) {
+      let y = by;
+      while (y + 1 < CHUNK_HEIGHT && this.world.getBlock(bx, y + 1, bz) === BlockId.Water) y++;
+      depth = Math.max(0, y + 1 - eye.y);
+    }
+
+    this.underwater += ((inside ? 1 : 0) - this.underwater) * Math.min(1, dt * 10);
+    if (this.underwater < 0.004) this.underwater = 0;
+
+    const day = this.sky.daylight;
+    this.tintColor.set(W.tint).multiplyScalar(0.35 + 0.75 * day);
+
+    const fog = this.renderer.scene.fog as THREE.Fog | null;
+    if (fog) {
+      fog.near = THREE.MathUtils.lerp(this.baseFogNear, W.fogNear, this.underwater);
+      fog.far = THREE.MathUtils.lerp(this.baseFogFar, W.fogFar * (0.6 + 0.4 * day), this.underwater);
+      // Sky.update has just painted this with the sky colour; pull it to water.
+      fog.color.lerp(this.tintColor, this.underwater);
+    }
+
+    this.renderer.renderer.getClearColor(this.clearColor);
+    this.clearColor.lerp(this.tintColor, this.underwater);
+    this.renderer.renderer.setClearColor(this.clearColor);
+
+    // Looking up toward the surface lets more light in, so the tint thins out.
+    const upness = Math.max(0, Math.sin(this.fpCamera.pitch));
+    const viewFactor = 1 - upness * 0.45;
+
+    const strength =
+      this.underwater *
+      Math.min(W.overlayMax, W.overlayBase + depth * W.overlayPerBlock) *
+      (0.5 + 0.5 * day) *
+      viewFactor;
+    this.ui.setUnderwater(strength);
+  }
+
+  private playFootsteps(dt: number, moving: boolean): void {    if (!moving || !this.player.onGround || this.player.flying) {
       this.stepTimer = 0;
       return;
     }

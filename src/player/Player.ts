@@ -14,6 +14,7 @@ export interface MoveInput {
 }
 
 const P = CONFIG.player;
+const W = CONFIG.water;
 
 /** Move `current` toward `target` by at most `maxDelta`. */
 function approach(current: number, target: number, maxDelta: number): number {
@@ -61,15 +62,16 @@ export class Player {
 
     this.inWater = this.checkWater();
     const speed =
-      P.walkSpeed * (input.sprint && moving ? P.sprintMultiplier : 1) * (this.inWater ? 0.62 : 1);
+      P.walkSpeed * (input.sprint && moving ? P.sprintMultiplier : 1) * (this.inWater ? W.moveFactor : 1);
 
     const wasOnGround = this.onGround;
 
     if (this.inWater) {
-      // Buoyancy: slow sinking, and holding jump swims upward.
-      this.velocity.y += P.gravity * 0.22 * dt;
-      this.velocity.y = Math.max(this.velocity.y, -3.4);
-      if (input.jump) this.velocity.y = 4.4;
+      // Buoyancy: sink slowly, swim up while holding jump, and keep the drag
+      // heavy so a dive feels like water rather than a slow fall.
+      this.velocity.y += P.gravity * W.gravityFactor * dt;
+      this.velocity.y = Math.max(this.velocity.y, -W.sinkSpeed);
+      if (input.jump) this.velocity.y = W.swimSpeed;
       this.onGround = false;
       this.coyote = 0;
       this.jumpQueued = 0;
