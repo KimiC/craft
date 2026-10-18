@@ -35,13 +35,18 @@ feedback** and **three rendering bugs**.
 ## 2. Already shipped in this build
 
 - Collect-the-stars loop with HUD timer, best time, round counter, win celebration
-- 19 blocks incl. ores, glass, glowstone, brick, ice and TNT; painted 128×128 atlas
+- 20 blocks incl. ores, glass, glowstone, brick, ice, TNT and a command block;
+  painted 128×128 atlas
 - Terrain: hills, mountains, ocean basins, beaches, snow line, caves, ore veins
 - Day/night cycle: sun and moon sprites, stars, drifting clouds, fog, moonlight
+- Water as a medium: buoyancy, swim-up key, underwater fog and depth/light tint
 - Sprint, jump buffering, coyote time, swimming, fly mode
 - Hold-to-repeat breaking/placing, block outline, undo
 - TNT with fuse, chain reactions, debris particles, screen shake, flash
-- WebAudio SFX, mute, photo mode (PNG), F3 debug overlay
+- WebAudio SFX, mute, photo mode (PNG), F3/backquote debug overlay (incl. GPU name)
+- In-game command console (`/`) with English + Chinese aliases
+- Command blocks: `E` to attach a command, stand on the block to trigger it,
+  command text saved with the world
 - Pause / help / start screens, mobile joystick + touch buttons
 - Typed-array autosave, seed input, new-world reset
 
@@ -139,6 +144,12 @@ like code still get a hook. `TextureAtlas` already paints on a canvas.
 **4.3 Redstone-lite** — *3–5 days*
 Wire, switch, lamp, pressure plate. Boolean logic in a game. The best "real
 computer science in disguise" project here, and a great extension task.
+
+> Shipping already: the command block covers the *event → action* half of this
+> (stand on it and a command runs). What is still missing is the *signal* half —
+> a block that fires when a neighbour changes, so triggers can be chained and
+> combined with AND/OR. Wire + `CommandBlock` + a few gates is the natural next
+> step and is already the most requested by the age group.
 
 **4.4 In-game tutorial world** — *½ day*
 A hand-built world with signposts made of blocks explaining controls. Better than a

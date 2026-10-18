@@ -36,6 +36,11 @@ click on **Resume** normally fixes it.
 **Extension for the fast finishers:** set `day.lengthSeconds` to 30 and
 `starCount` to 25, then talk about why the game gets harder.
 
+**No-code alternative (no editor needed).** Everything below also works with the
+in-game command console: press `/` and type `gravity 0.1`, `speed 2` or `star 5`.
+Students see cause → effect in under a second, then find the same numbers in
+`src/config.ts` — "the console is typing into the file for you".
+
 **Exit ticket:** "One thing the game does that I now know how to change."
 
 ---
@@ -83,6 +88,22 @@ Acceptance:
 
 This is the brief that maps directly onto `src/game/StarField.ts` and
 `Game.completeRound()` — good reading material for the design phase.
+
+**Warm-up version, do this first (20 minutes).** Skip TypeScript entirely: build a
+working machine out of command blocks. The rule is "a classmate walks in and
+something happens to them". Examples students have enjoyed:
+
+| Build | Command on the block |
+|---|---|
+| Night trap | `time 22` |
+| Star shower | `star 5` |
+| Moon room | `gravity 0.1` |
+| Emergency exit | `tp 0 30 0` |
+| Demolition | `tnt` |
+
+Then the debrief question is the whole lesson: *what is the difference between this
+and a real program?* (Answer: triggers, state, and order — which is exactly the gap
+brief C asks them to close.)
 
 ---
 

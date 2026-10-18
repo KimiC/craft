@@ -293,12 +293,24 @@
           <span><b>Right click</b> place block</span>
           <span><b>1–9</b> or mouse wheel — pick block</span>
           <span><b>Ctrl+Z</b> undo last edit</span>
+          <span><b>/</b> command console</span>
+          <span><b>E</b> edit the command block you look at</span>
           <span><b>P</b> photo mode (saves a PNG)</span>
           <span><b>M</b> mute</span>
+          <span><b>F3</b> or <b>`</b> debug overlay</span>
           <span><b>Esc</b> pause</span>
         </div>
         <p class="sub" style="margin-top: 18px; margin-bottom: 0;">
           Red <b>TNT</b> blocks explode when you break them. Chain reaction? Yes.
+        </p>
+        <p class="sub" style="margin-top: 10px; margin-bottom: 0;">
+          Water is real: you sink slowly, hold <b>Space</b> to swim up, and your view turns blue
+          under the surface.
+        </p>
+        <p class="sub" style="margin-top: 10px; margin-bottom: 0;">
+          <b>Change the rules:</b> press <b>/</b> and try <code>time 22</code>, <code>gravity 0.1</code>
+          or <code>star 5</code>. Then place the orange <b>&gt;</b> block, press <b>E</b> to give it a
+          command, and stand on it — that is a machine that reacts to you.
         </p>
         <button id="btn-close-help" class="ghost">Back</button>
       </div>
@@ -315,7 +327,7 @@
       </div>
       <div id="toasts"></div>
       <div id="hotbar"></div>
-      <div id="hintbar">F fly · P photo · M mute · H help</div>
+      <div id="hintbar">F fly · / console · P photo · M mute · H help</div>
       <button id="btn-menu" class="hidden" type="button">☰</button>
     </div>
 
