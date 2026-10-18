@@ -4,7 +4,8 @@ A browser voxel sandbox in the spirit of Minecraft: TypeScript + Three.js + Vite
 No image files, no audio files, no backend — every texture and every sound effect is
 generated in code, so the whole game is one small bundle.
 
-> Originally a demo for [KimiC](https://github.com/KimiC) — play at http://craft.rafter.com.cn/
+> Originally a demo for [KimiC](https://github.com/KimiC) — play at **https://kimic.cn/craft/**
+> (the older demo build is still at http://craft.rafter.com.cn/)
 
 ## What you can do
 
@@ -150,20 +151,31 @@ is a working "step here and it turns to night" trap.
 
 ## Getting started
 
-1. Accept the GitHub collaborator invite (email from GitHub)
-2. Install [Git](https://git-scm.com/) and [Node.js](https://nodejs.org/)
-3. Clone and run:
-
 ```bash
-git clone https://github.com/Raft-chen/craft.git
+git clone https://github.com/KimiC/craft.git
 cd craft
 npm install
 npm run dev
 ```
 
-4. Open http://localhost:5173/ in your browser
-5. Live game: http://craft.rafter.com.cn/
-6. After changes: `git add .` → `git commit -m "message"` → `git push`
+Open http://localhost:5173/.
+
+| | |
+|---|---|
+| Repository | **https://github.com/KimiC/craft** (fork of `Raft-chen/craft`) |
+| Play — primary | **https://kimic.cn/craft/** |
+| Play — original demo | https://craft.rafter.com.cn/ |
+| Local checkout | whatever path you clone into, e.g. `D:\dsh\games\craft` |
+
+Requires Node.js 20+ and Git. There is no backend, no API key and no build-time
+secret: every texture and sound effect is generated in code at runtime.
+
+Remotes:
+
+| Remote | URL | Role |
+|---|---|---|
+| `origin` | https://github.com/KimiC/craft | all work happens here; this is what gets deployed |
+| `upstream` | https://github.com/ai-game-craft/craft | read-only mirror, **not** deployed |
 
 ## Development
 
@@ -172,108 +184,123 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173/
+Open http://localhost:5173/ — hot reload, no build step needed.
 
 ## Production Build
 
+Two builds, because the two live sites mount the game at different paths:
+
 ```bash
+# served from the domain root  -> https://craft.rafter.com.cn/
 npm run build
+
+# served from /craft/          -> https://kimic.cn/craft/
+npm run build:kimic
 ```
 
-Output in `dist/` — deploy to web server root.
+| Command | Output | Used by |
+|---|---|---|
+| `npm run build` | `dist/` | craft.rafter.com.cn |
+| `npm run build:kimic` | `dist-kimic/` | kimic.cn/craft |
 
-## Deploy to craft.rafter.com.cn (Git)
+`build:kimic` is just `vite build --base=/craft/ --outDir=dist-kimic --emptyOutDir`.
+The `--base=/craft/` flag is not optional: without it the asset URLs point at the
+domain root and the page loads blank. `dist-kimic/` is gitignored.
+
+## Deploy
+
+### Where the two live sites come from
+
+| Site | URL | Web root on the server | Build |
+|---|---|---|---|
+| KimiC homepage + game | **https://kimic.cn/craft/** | `/var/www/kimic/craft` | `--base=/craft/` |
+| Original demo | https://craft.rafter.com.cn/ | `/var/www/craft.rafter.com.cn` | default base |
+
+Server: Aliyun ECS `47.82.233.199`, user `admin`, nginx 1.20, TLS certificates from
+certbot (its timer renews them). The server keeps a git clone at `~/craft` for the
+rafter build; the kimic build is produced locally and copied over.
+
+### Every update
+
+**1. Commit and push** (from your checkout):
+
+```bash
+git add -A
+git commit -m "Describe your change"
+git push origin main
+```
+
+**2. Deploy to kimic.cn/craft** — build locally, copy the static files:
+
+```bash
+npm run deploy:kimic
+```
+
+That one script is a shortcut for exactly this:
+
+```bash
+npx vite build --base=/craft/ --outDir=dist-kimic
+ssh admin@47.82.233.199 "rm -rf /tmp/craft-dist"
+scp -r dist-kimic admin@47.82.233.199:/tmp/craft-dist
+ssh admin@47.82.233.199 "sudo rm -rf /var/www/kimic/craft && sudo cp -r /tmp/craft-dist /var/www/kimic/craft && sudo chown -R nginx:nginx /var/www/kimic/craft"
+```
+
+**3. Optionally also refresh the original demo** — the server builds it from git:
+
+```bash
+npm run deploy:rafter
+```
+
+which runs `ssh admin@47.82.233.199 "cd ~/craft && git pull && bash deploy/deploy.sh"`.
+`deploy/deploy.sh` does `git pull` → `npm ci` → `npm run build` → copies `dist/` to
+`/var/www/craft.rafter.com.cn/`.
 
 ### One-time server setup
 
-SSH into ECS (web terminal or `ssh admin@47.82.233.199`), then:
+SSH in (`ssh admin@47.82.233.199`), then:
 
 ```bash
-# Install Node.js 20 if needed (Aliyun Linux / CentOS)
+# Node.js 20 + git (Aliyun Linux / CentOS)
 curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 sudo yum install -y nodejs git
 
 # Clone and first deploy
-git clone https://github.com/Raft-chen/craft.git ~/craft
+git clone https://github.com/KimiC/craft.git ~/craft
 cd ~/craft
 chmod +x deploy/setup-server.sh deploy/deploy.sh
 bash deploy/setup-server.sh
 ```
 
-Ensure nginx is configured — see [deploy/nginx.craft.conf.example](deploy/nginx.craft.conf.example)  
-(Aliyun Linux uses `/etc/nginx/conf.d/craft.rafter.com.cn.conf`)
+### nginx
 
-### Every update (your workflow)
+| Config file | Serves |
+|---|---|
+| `/etc/nginx/conf.d/kimic.cn.conf` | `kimic.cn` — the homepage at `/var/www/kimic`, the game under `/craft/` |
+| `/etc/nginx/conf.d/craft.rafter.com.cn.conf` | `craft.rafter.com.cn` |
 
-**On your PC** — commit and push:
-
-```powershell
-cd C:\fw\Turin_BIOS_code\rafter-voxel
-git add .
-git commit -m "Describe your change"
-git push
-```
-
-**Deploy to server** — either:
-
-```powershell
-# Option A: from PC, trigger remote build
-npm run deploy
-# or
-.\deploy\deploy.ps1
-```
-
-```bash
-# Option B: on the server directly
-cd ~/craft
-git pull origin main
-bash deploy/deploy.sh
-```
-
-The script pulls git, runs `npm ci`, `npm run build`, and copies `dist/` to `/var/www/craft.rafter.com.cn/`.
+Both set `charset utf-8`. Templates live in `deploy/` (`nginx.craft.conf.example`).
 
 ### DNS
 
-| Type | Host | Value |
-|------|------|-------|
-| A | craft | your server public IP |
+| Type | Host | Points at |
+|---|---|---|
+| A | `kimic.cn` | server public IP `47.82.233.199` |
+| A | `craft.rafter.com.cn` | server public IP `47.82.233.199` |
 
-Access: **http://craft.rafter.com.cn/**
+### HTTPS
 
-### HTTPS (recommended for mobile Pointer Lock)
-
-**Before running:** Aliyun ECS security group must allow **TCP 443** inbound.
-
-On Aliyun Linux, `yum install certbot` often fails — use the script (tries pip, then acme.sh):
+Certificates for both domains are already issued by certbot and renewed by its
+timer. Check them with:
 
 ```bash
-cd ~/craft
-git checkout -- deploy/deploy.sh 2>/dev/null || true
-git pull origin main
-chmod +x deploy/setup-https.sh
-
-export EMAIL=you@example.com
-bash deploy/setup-https.sh
+sudo certbot certificates
+sudo certbot renew --dry-run
 ```
 
-**Manual fallback (pip):**
-
-```bash
-sudo yum install -y python3-pip
-sudo python3 -m pip install certbot certbot-nginx
-sudo certbot --nginx -d craft.rafter.com.cn
-```
-
-**Manual fallback (acme.sh) — if pip also fails:**
-
-```bash
-curl https://get.acme.sh | sh -s email=you@example.com
-~/.acme.sh/acme.sh --issue -d craft.rafter.com.cn -w /var/www/craft.rafter.com.cn
-```
-
-Then follow acme.sh nginx install hints, or re-run `bash deploy/setup-https.sh`.
-
-Verify: `curl -I https://craft.rafter.com.cn/`
+If a certificate ever needs reissuing, `deploy/setup-https.sh` on the server does it
+(`sudo certbot --nginx -d <domain>` is the manual fallback). HTTPS is not cosmetic
+here: mobile browsers only allow Pointer Lock on a secure origin, so the game is
+unplayable on a phone over plain HTTP.
 
 ## Architecture
 

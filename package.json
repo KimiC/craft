@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy": "ssh admin@47.82.233.199 \"cd ~/craft && git pull origin main && bash deploy/deploy.sh\""
+    "build:kimic": "vite build --base=/craft/ --outDir=dist-kimic --emptyOutDir",
+    "deploy:kimic": "npm run build:kimic && ssh admin@47.82.233.199 \"rm -rf /tmp/craft-dist\" && scp -r dist-kimic admin@47.82.233.199:/tmp/craft-dist && ssh admin@47.82.233.199 \"sudo rm -rf /var/www/kimic/craft && sudo cp -r /tmp/craft-dist /var/www/kimic/craft && sudo chown -R nginx:nginx /var/www/kimic/craft\"",
+    "deploy:rafter": "ssh admin@47.82.233.199 \"cd ~/craft && git pull origin main && bash deploy/deploy.sh\"",
+    "deploy": "npm run deploy:rafter"
   },
   "dependencies": {
     "simplex-noise": "^4.0.1",
