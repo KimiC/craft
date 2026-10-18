@@ -576,7 +576,9 @@ export class Game {
       this.ui.toast(muted ? 'Sound off' : 'Sound on');
     }
     if (this.input.wasPressed('KeyP')) this.takePhoto();
-    if (this.input.wasPressed('F3')) {
+    // F3 is the Minecraft muscle memory, but browsers reserve it (find next),
+    // so the backquote key is the reliable alias.
+    if (this.input.wasPressed('F3') || this.input.wasPressed('Backquote')) {
       this.showDebug = !this.showDebug;
       this.ui.setDebug(this.showDebug ? ' ' : null);
     }

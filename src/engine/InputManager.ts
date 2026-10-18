@@ -26,7 +26,9 @@ export class InputManager {
     window.addEventListener('keydown', (e) => {
       if (!this.keys.has(e.code)) this.pressedThisFrame.add(e.code);
       this.keys.add(e.code);
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
+      // F3 is Chrome's "find next": without this it opens the find bar, which
+      // drops pointer lock and makes the game look like it paused itself.
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F3'].includes(e.code)) {
         e.preventDefault();
       }
     });
