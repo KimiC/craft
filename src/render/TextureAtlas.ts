@@ -327,7 +327,9 @@ export class TextureAtlas {
     this.canvas = canvas;
     this.texture = new THREE.CanvasTexture(canvas);
     this.texture.magFilter = THREE.NearestFilter;
-    this.texture.minFilter = THREE.LinearMipmapLinearFilter;
+    // Nearest sampling *within* a mip level keeps texels crisp; linear only
+    // between levels, so distant ground stops looking like smeared noise.
+    this.texture.minFilter = THREE.NearestMipmapLinearFilter;
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.generateMipmaps = true;
     this.texture.anisotropy = 4;
@@ -363,6 +365,16 @@ export class TextureAtlas {
   /** Average colour of a tile, e.g. for block debris particles. */
   averageColor(tileIndex: number): number {
     return this.tileAvg[tileIndex] ?? 0x888888;
+  }
+
+  /**
+   * Use the GPU's full anisotropic budget. Grazing angles (a grass plain seen
+   * from eye height) are exactly where trilinear filtering turns the ground
+   * into mush; anisotropy is what keeps it readable.
+   */
+  setMaxAnisotropy(max: number): void {
+    this.texture.anisotropy = Math.min(16, Math.max(1, max));
+    this.texture.needsUpdate = true;
   }
 
   getUV(tileIndex: number): [number, number, number, number] {

@@ -87,6 +87,8 @@ export class Game {
   private baseFogFar = 125;
   private readonly tintColor = new THREE.Color();
   private readonly clearColor = new THREE.Color();
+  /** WebGL renderer string, so F3 can show whether the GPU is really in use. */
+  private readonly gpuName: string;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -95,11 +97,18 @@ export class Game {
       this.baseFogNear = fog.near;
       this.baseFogFar = fog.far;
     }
+
+    const gl = this.renderer.renderer.getContext();
+    const dbgInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    this.gpuName = dbgInfo
+      ? String(gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL)).slice(0, 70)
+      : 'unknown';
     this.sky = new Sky(this.renderer.scene, this.renderer.renderer);
     this.input = new InputManager(canvas);
     this.fpCamera = new FPCamera();
     this.world = new ChunkManager();
     this.atlas = new TextureAtlas();
+    this.atlas.setMaxAnisotropy(this.renderer.renderer.capabilities.getMaxAnisotropy());
     this.meshManager = new ChunkMeshManager(this.atlas, this.world, this.renderer.scene);
     this.player = new Player(this.world);
     this.saveManager = new SaveManager();
@@ -941,6 +950,7 @@ export class Game {
       `fps ${this.fps}  chunks ${this.world.getLoadedChunks().length}\n` +
         `pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}\n` +
         `time ${this.sky.time.toFixed(1)}h  fly ${this.player.flying ? 'on' : 'off'}\n` +
+        `gpu ${this.gpuName}\n` +
         (near ? `nearest star ${near.dist.toFixed(0)}m` : 'no stars left'),
     );
   }

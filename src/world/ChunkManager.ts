@@ -56,6 +56,18 @@ export class ChunkManager {
 
     chunk.setBlock(lx, ly, lz, blockId);
 
+    // Faces on a chunk border are owned by the neighbouring chunk's mesh too.
+    // Without marking those dirty, removing a block on a chunk edge leaves a
+    // one-cube hole through which you can see the sky.
+    const markDirty = (nx: number, nz: number) => {
+      const c = this.chunks.get(chunkKey(nx, nz));
+      if (c) c.dirty = true;
+    };
+    if (lx === 0) markDirty(cx - 1, cz);
+    if (lx === CHUNK_SIZE - 1) markDirty(cx + 1, cz);
+    if (lz === 0) markDirty(cx, cz - 1);
+    if (lz === CHUNK_SIZE - 1) markDirty(cx, cz + 1);
+
     const msg: BlockUpdateMessage = {
       type: 'block_update',
       x: wx,

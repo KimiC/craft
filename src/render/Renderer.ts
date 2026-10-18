@@ -9,8 +9,7 @@ export class Renderer {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
-      // Needed so photo mode can grab the frame as a PNG.
-      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance',
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
