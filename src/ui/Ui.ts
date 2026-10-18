@@ -44,6 +44,9 @@ export class Ui {
 
   private flashEl: HTMLDivElement;
   private underwaterEl: HTMLDivElement;
+  private consoleEl: HTMLDivElement;
+  private consoleLog: HTMLDivElement;
+  readonly consoleInput: HTMLInputElement;
   private slots: HTMLDivElement[] = [];
 
   constructor() {
@@ -68,6 +71,77 @@ export class Ui {
       'will-change:opacity',
     ].join(';');
     document.body.appendChild(this.underwaterEl);
+
+    // Command console: the "change the rules" entry point. Opened with "/".
+    this.consoleEl = document.createElement('div');
+    this.consoleEl.id = 'console';
+    this.consoleEl.style.cssText = [
+      'position:fixed',
+      'left:50%',
+      'bottom:15%',
+      'transform:translateX(-50%)',
+      'width:min(720px,92vw)',
+      'z-index:9',
+      'display:none',
+      'flex-direction:column',
+      'gap:6px',
+      'padding:10px 12px',
+      'background:rgba(8,14,24,0.88)',
+      'color:#e6f2ff',
+      'border:1px solid rgba(120,190,255,0.35)',
+      'border-radius:10px',
+      'box-shadow:0 12px 44px rgba(0,0,0,0.55)',
+      'font:13px/1.55 ui-monospace,Consolas,"Courier New",monospace',
+      'pointer-events:auto',
+    ].join(';');
+
+    this.consoleLog = document.createElement('div');
+    this.consoleLog.style.cssText = 'max-height:200px;overflow-y:auto;white-space:pre-wrap;';
+
+    const row = document.createElement('div');
+    row.style.cssText =
+      'display:flex;gap:8px;align-items:center;border-top:1px solid rgba(120,190,255,0.22);padding-top:6px;';
+    const prompt = document.createElement('span');
+    prompt.textContent = '>';
+    prompt.style.cssText = 'color:#7fd1ff;';
+    this.consoleInput = document.createElement('input');
+    this.consoleInput.type = 'text';
+    this.consoleInput.spellcheck = false;
+    this.consoleInput.autocomplete = 'off';
+    this.consoleInput.setAttribute('autocapitalize', 'off');
+    this.consoleInput.style.cssText =
+      'flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;padding:2px 0;';
+    row.append(prompt, this.consoleInput);
+    this.consoleEl.append(this.consoleLog, row);
+    document.body.appendChild(this.consoleEl);
+  }
+
+  get consoleVisible(): boolean {
+    return this.consoleEl.style.display !== 'none';
+  }
+
+  openConsole(): void {
+    this.consoleEl.style.display = 'flex';
+  }
+
+  closeConsole(): void {
+    this.consoleEl.style.display = 'none';
+  }
+
+  clearConsole(): void {
+    this.consoleLog.textContent = '';
+  }
+
+  consoleLogEmpty(): boolean {
+    return this.consoleLog.childElementCount === 0;
+  }
+
+  printConsole(line: string, kind: 'info' | 'ok' | 'error' = 'info'): void {
+    const el = document.createElement('div');
+    el.textContent = line;
+    el.style.color = kind === 'error' ? '#ff9a9a' : kind === 'ok' ? '#9df0b8' : '#cfe6ff';
+    this.consoleLog.appendChild(el);
+    this.consoleLog.scrollTop = this.consoleLog.scrollHeight;
   }
 
   /** 0 = dry, 1 = fully tinted; the game feeds it depth- and light-aware values. */

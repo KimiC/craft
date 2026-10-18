@@ -78,6 +78,8 @@ export class Game {
   private stepTimer = 0;
   private shake = 0;
   private showDebug = false;
+  /** Command console open: game keys are ignored and the pointer is released. */
+  private consoleOpen = false;
   private clock = 0;
   private suppressPause = false;
   private wasInWater = false;
@@ -174,7 +176,25 @@ export class Game {
 
     document.addEventListener('pointerlockerror', () => {
       if (this.input.mobile || !this.active) return;
+      // Re-locking after the console closes can be refused (no user gesture in
+      // some browsers); that must not look like the player pressed Esc.
+      if (this.suppressPause) return;
       this.setPaused(true);
+    });
+
+    this.ui.consoleInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        const line = this.ui.consoleInput.value.trim();
+        this.ui.consoleInput.value = '';
+        if (line === '') {
+          this.closeConsole();
+          return;
+        }
+        this.runCommand(line);
+      } else if (e.key === 'Escape') {
+        this.closeConsole();
+      }
     });
 
     void this.refreshStartScreen();
@@ -442,6 +462,136 @@ export class Game {
     this.ui.toast(this.player.flying ? 'Fly on — Space up, Shift down' : 'Fly off', 'green');
   }
 
+  // ---------------------------------------------------------------- console
+
+  /**
+   * The "change the rules" entry point: press "/" to open a small command
+   * console. Mouse look is released so the browser can type, and re-acquired
+   * when the console closes; the pause-on-pointerlock-loss handler is muted
+   * for the duration, otherwise opening the console would look like Esc.
+   */
+  private openConsole(): void {
+    if (!this.active || this.paused || this.consoleOpen) return;
+    this.consoleOpen = true;
+    this.suppressPause = true;
+    this.input.keys.clear();
+    this.input.mouseLeft = false;
+    this.input.mouseRight = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    this.ui.openConsole();
+    if (this.ui.consoleLogEmpty()) {
+      this.ui.printConsole('输入 help 查看命令。Enter 执行，空行或 Esc 关闭。', 'info');
+    }
+    this.ui.consoleInput.focus();
+  }
+
+  private closeConsole(): void {
+    if (!this.consoleOpen) return;
+    this.consoleOpen = false;
+    this.ui.closeConsole();
+    this.ui.consoleInput.blur();
+    if (!this.input.mobile) {
+      this.suppressPause = true;
+      this.input.requestPointerLock();
+      window.setTimeout(() => {
+        this.suppressPause = false;
+      }, 600);
+    }
+  }
+
+  private runCommand(raw: string): void {
+    const parts = raw.trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    const num = (i: number, def: number): number => {
+      const v = parseFloat(args[i]);
+      return Number.isFinite(v) ? v : def;
+    };
+    const p = this.player.position;
+    const where = `位置 ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}`;
+
+    switch (cmd) {
+      case 'help':
+      case '帮助':
+      case '?':
+        this.ui.printConsole('可用命令：', 'ok');
+        this.ui.printConsole('  help / 帮助            显示命令列表');
+        this.ui.printConsole('  time <0-24> / 时间     设置时间（0 午夜，12 正午）');
+        this.ui.printConsole('  day / 白天   night / 夜晚');
+        this.ui.printConsole('  tp <x> <y> <z> / 传送  相对当前位置移动');
+        this.ui.printConsole('  where / 坐标           显示位置与种子');
+        this.ui.printConsole('  fly / 飞行             开关飞行');
+        this.ui.printConsole('  star [数量] / 星星     在周围生成星星');
+        this.ui.printConsole('  seed / 种子            显示世界种子');
+        this.ui.printConsole('  clear                  清空屏幕');
+        break;
+      case 'time':
+      case '时间': {
+        const h = num(0, NaN);
+        if (!Number.isFinite(h)) {
+          this.ui.printConsole('用法: time <0-24>', 'error');
+          break;
+        }
+        this.sky.time = ((h % 24) + 24) % 24;
+        this.ui.printConsole(`时间设为 ${this.sky.time.toFixed(1)} 点`, 'ok');
+        break;
+      }
+      case 'day':
+      case '白天':
+        this.sky.time = 12;
+        this.ui.printConsole('白天', 'ok');
+        break;
+      case 'night':
+      case '夜晚':
+        this.sky.time = 22;
+        this.ui.printConsole('夜晚', 'ok');
+        break;
+      case 'tp':
+      case '传送': {
+        if (args.length < 3) {
+          this.ui.printConsole('用法: tp <x> <y> <z>（相对当前位置）', 'error');
+          break;
+        }
+        p.x += num(0, 0);
+        p.y += num(1, 0);
+        p.z += num(2, 0);
+        p.y = Math.max(1, Math.min(CHUNK_HEIGHT - 2, p.y));
+        this.player.velocity.set(0, 0, 0);
+        this.ui.printConsole(`传送完成，${where}`, 'ok');
+        break;
+      }
+      case 'where':
+      case '坐标':
+        this.ui.printConsole(`${where}  种子 ${this.world.seed}`, 'ok');
+        break;
+      case 'fly':
+      case '飞行':
+        this.toggleFly();
+        this.ui.printConsole(this.player.flying ? '飞行：开' : '飞行：关', 'ok');
+        break;
+      case 'star':
+      case '星星': {
+        const n = Math.max(1, Math.min(20, Math.round(num(0, 1))));
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = 2 + Math.random() * 4;
+          this.stars.spawnAt(p.x + Math.cos(a) * r, p.y + 1.5, p.z + Math.sin(a) * r);
+        }
+        this.ui.printConsole(`生成了 ${n} 颗星星`, 'ok');
+        break;
+      }
+      case 'seed':
+      case '种子':
+        this.ui.printConsole(`世界种子 ${this.world.seed}`, 'ok');
+        break;
+      case 'clear':
+        this.ui.clearConsole();
+        break;
+      default:
+        this.ui.printConsole(`未知命令: ${cmd}，输入 help 查看`, 'error');
+    }
+  }
+
   // ---------------------------------------------------------------- loop
 
   private loop(now: number): void {
@@ -564,6 +714,11 @@ export class Game {
   }
 
   private readKeyboard(): void {
+    if (this.consoleOpen) return;
+    if (this.input.wasPressed('Slash')) {
+      this.openConsole();
+      return;
+    }
     for (let i = 0; i < 9 && i < PLACEABLE_BLOCKS.length; i++) {
       if (this.input.wasPressed(`Digit${i + 1}`)) this.selectSlot(i);
     }

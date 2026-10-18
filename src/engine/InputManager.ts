@@ -24,6 +24,12 @@ export class InputManager {
       (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900);
 
     window.addEventListener('keydown', (e) => {
+      // Typing in the command console must not drive the player or get its
+      // space / tab keys swallowed by preventDefault.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
       if (!this.keys.has(e.code)) this.pressedThisFrame.add(e.code);
       this.keys.add(e.code);
       // F3 is Chrome's "find next": without this it opens the find bar, which

@@ -106,6 +106,11 @@ export class StarField {
     this.stars.push({ group, x, y, z, alive: true, phase: Math.random() * Math.PI * 2 });
   }
 
+  /** Public drop point, used by the command console. */
+  spawnAt(x: number, y: number, z: number): void {
+    this.addStar(x, y, z);
+  }
+
   /** Collect any star the player is standing in. Returns what was picked up. */
   collectAt(px: number, py: number, pz: number): { x: number; y: number; z: number }[] {
     const picked: { x: number; y: number; z: number }[] = [];
