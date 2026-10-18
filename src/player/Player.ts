@@ -38,6 +38,9 @@ export class Player {
   private coyote = 0;
   private jumpQueued = 0;
   private impactSpeed = 0;
+  /** Multipliers the command console can nudge, e.g. "speed 2" or "gravity 0". */
+  speedMultiplier = 1;
+  gravityMultiplier = 1;
 
   constructor(private world: ChunkManager) {}
 
@@ -62,14 +65,17 @@ export class Player {
 
     this.inWater = this.checkWater();
     const speed =
-      P.walkSpeed * (input.sprint && moving ? P.sprintMultiplier : 1) * (this.inWater ? W.moveFactor : 1);
+      P.walkSpeed *
+      (input.sprint && moving ? P.sprintMultiplier : 1) *
+      (this.inWater ? W.moveFactor : 1) *
+      this.speedMultiplier;
 
     const wasOnGround = this.onGround;
 
     if (this.inWater) {
       // Buoyancy: sink slowly, swim up while holding jump, and keep the drag
       // heavy so a dive feels like water rather than a slow fall.
-      this.velocity.y += P.gravity * W.gravityFactor * dt;
+      this.velocity.y += P.gravity * W.gravityFactor * this.gravityMultiplier * dt;
       this.velocity.y = Math.max(this.velocity.y, -W.sinkSpeed);
       if (input.jump) this.velocity.y = W.swimSpeed;
       this.onGround = false;
@@ -88,7 +94,7 @@ export class Player {
         this.justJumped = true;
       }
 
-      this.velocity.y += P.gravity * dt;
+      this.velocity.y += P.gravity * this.gravityMultiplier * dt;
       if (!this.onGround) this.impactSpeed = Math.max(this.impactSpeed, -this.velocity.y);
     }
 
@@ -129,7 +135,7 @@ export class Player {
   }
 
   private updateFlying(move: THREE.Vector3, input: MoveInput, dt: number): void {
-    const speed = P.flySpeed;
+    const speed = P.flySpeed * this.speedMultiplier;
     this.velocity.x = move.x * speed;
     this.velocity.z = move.z * speed;
     let vy = 0;

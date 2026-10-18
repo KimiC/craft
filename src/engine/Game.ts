@@ -80,6 +80,11 @@ export class Game {
   private showDebug = false;
   /** Command console open: game keys are ignored and the pointer is released. */
   private consoleOpen = false;
+  /** Command attached to each command-block position, keyed "x,y,z". */
+  private readonly commandBlocks = new Map<string, string>();
+  private readonly commandCooldown = new Map<string, number>();
+  private consoleMode: 'command' | 'block' = 'command';
+  private editingBlock: { x: number; y: number; z: number } | null = null;
   private clock = 0;
   private suppressPause = false;
   private wasInWater = false;
@@ -187,6 +192,10 @@ export class Game {
       if (e.key === 'Enter') {
         const line = this.ui.consoleInput.value.trim();
         this.ui.consoleInput.value = '';
+        if (this.consoleMode === 'block') {
+          this.saveBlockCommand(line);
+          return;
+        }
         if (line === '') {
           this.closeConsole();
           return;
@@ -270,6 +279,10 @@ export class Game {
         this.player.position.set(saved.playerPos.x, saved.playerPos.y, saved.playerPos.z);
         this.world.loadChunksAround(this.player.position.x, this.player.position.z, this.renderDistance);
         this.player.placeOnGround(this.world);
+        this.commandBlocks.clear();
+        for (const [key, cmd] of Object.entries(saved.commands ?? {})) {
+          this.commandBlocks.set(key, cmd);
+        }
       } else {
         this.world.reset(seed);
         this.buildFreshWorld();
@@ -470,8 +483,9 @@ export class Game {
    * when the console closes; the pause-on-pointerlock-loss handler is muted
    * for the duration, otherwise opening the console would look like Esc.
    */
-  private openConsole(): void {
+  private openConsole(mode: 'command' | 'block' = 'command'): void {
     if (!this.active || this.paused || this.consoleOpen) return;
+    this.consoleMode = mode;
     this.consoleOpen = true;
     this.suppressPause = true;
     this.input.keys.clear();
@@ -479,7 +493,7 @@ export class Game {
     this.input.mouseRight = false;
     if (document.pointerLockElement) document.exitPointerLock();
     this.ui.openConsole();
-    if (this.ui.consoleLogEmpty()) {
+    if (mode === 'command' && this.ui.consoleLogEmpty()) {
       this.ui.printConsole('输入 help 查看命令。Enter 执行，空行或 Esc 关闭。', 'info');
     }
     this.ui.consoleInput.focus();
@@ -488,6 +502,8 @@ export class Game {
   private closeConsole(): void {
     if (!this.consoleOpen) return;
     this.consoleOpen = false;
+    this.consoleMode = 'command';
+    this.editingBlock = null;
     this.ui.closeConsole();
     this.ui.consoleInput.blur();
     if (!this.input.mobile) {
@@ -497,6 +513,72 @@ export class Game {
         this.suppressPause = false;
       }, 600);
     }
+  }
+
+  /** A command block announces itself when you look at it and is edited with E. */
+  private openBlockEditor(x: number, y: number, z: number): void {
+    this.editingBlock = { x, y, z };
+    this.openConsole('block');
+    if (!this.consoleOpen) return;
+    const key = `${x},${y},${z}`;
+    const current = this.commandBlocks.get(key);
+    this.ui.printConsole(`命令方块 (${x}, ${y}, ${z})`, 'ok');
+    this.ui.printConsole(
+      current ? `当前命令：${current}` : '还没有命令。例如：star 3 / time 22 / box 3 / gravity 0',
+      'info',
+    );
+    this.ui.printConsole('Enter 保存，留空或输入 - 清除，Esc 取消。', 'info');
+    this.ui.consoleInput.value = current ?? '';
+    this.ui.consoleInput.focus();
+  }
+
+  private saveBlockCommand(line: string): void {
+    const b = this.editingBlock;
+    if (!b) {
+      this.closeConsole();
+      return;
+    }
+    const key = `${b.x},${b.y},${b.z}`;
+    if (line === '' || line === '-' || line === 'remove') {
+      this.commandBlocks.delete(key);
+      this.commandCooldown.delete(key);
+      this.ui.printConsole('已清除这个方块的命令', 'ok');
+    } else {
+      this.commandBlocks.set(key, line);
+      this.ui.printConsole(`保存：${line}`, 'ok');
+      this.ui.printConsole('站到这个方块上就会执行。', 'info');
+    }
+    this.editsSinceSave++;
+    this.closeConsole();
+  }
+
+  /** Fires the command of the block the player is standing on. */
+  private tickCommandBlocks(): void {
+    if (this.consoleOpen || this.commandBlocks.size === 0) return;
+    const p = this.player.position;
+    const bx = Math.floor(p.x);
+    const bz = Math.floor(p.z);
+    const feet = Math.floor(p.y);
+    // Standing on top of the block puts the feet at its upper face, so the
+    // block itself is one cell *below* floor(feet); walking through it puts it
+    // at feet level. Check both.
+    let key: string | null = null;
+    for (const by of [feet, feet - 1]) {
+      const k = `${bx},${by},${bz}`;
+      if (this.commandBlocks.has(k)) {
+        key = k;
+        break;
+      }
+    }
+    if (!key) return;
+    const cmd = this.commandBlocks.get(key);
+    if (!cmd) return;
+    const next = this.commandCooldown.get(key) ?? 0;
+    if (this.clock < next) return;
+    this.commandCooldown.set(key, this.clock + 1.6);
+    this.runCommand(cmd);
+    const [cx, cy, cz] = key.split(',').map(Number);
+    this.particles.spawnBurst(cx + 0.5, cy + 1.05, cz + 0.5, 0xf0913c, 10, 3.4, 0.12);
   }
 
   private runCommand(raw: string): void {
@@ -522,8 +604,14 @@ export class Game {
         this.ui.printConsole('  where / 坐标           显示位置与种子');
         this.ui.printConsole('  fly / 飞行             开关飞行');
         this.ui.printConsole('  star [数量] / 星星     在周围生成星星');
+        this.ui.printConsole('  speed <0.5-4> / 速度   移动速度倍数');
+        this.ui.printConsole('  gravity <0-3> / 重力   重力倍数（0 是月球）');
+        this.ui.printConsole('  box <半径>             用手里方块搭一个房间');
+        this.ui.printConsole('  tnt                    在脚边点燃 TNT');
+        this.ui.printConsole('  undo / 撤销            撤销上一次挖或放');
         this.ui.printConsole('  seed / 种子            显示世界种子');
         this.ui.printConsole('  clear                  清空屏幕');
+        this.ui.printConsole('命令方块：把橙色方块放在地上，对着它按 E 输入命令，站上去就会执行。', 'info');
         break;
       case 'time':
       case '时间': {
@@ -586,6 +674,61 @@ export class Game {
         break;
       case 'clear':
         this.ui.clearConsole();
+        break;
+      case 'speed':
+      case '速度': {
+        const v = num(0, NaN);
+        if (!Number.isFinite(v)) {
+          this.ui.printConsole('用法: speed <0.5-4>', 'error');
+          break;
+        }
+        this.player.speedMultiplier = Math.max(0.5, Math.min(4, v));
+        this.ui.printConsole(`速度 x${this.player.speedMultiplier}`, 'ok');
+        break;
+      }
+      case 'gravity':
+      case '重力': {
+        const v = num(0, NaN);
+        if (!Number.isFinite(v)) {
+          this.ui.printConsole('用法: gravity <0-3>（0 是月球重力）', 'error');
+          break;
+        }
+        this.player.gravityMultiplier = Math.max(0, Math.min(3, v));
+        this.ui.printConsole(`重力 x${this.player.gravityMultiplier}`, 'ok');
+        break;
+      }
+      case 'box':
+      case '房间': {
+        const r = Math.max(2, Math.min(6, Math.round(num(0, 3))));
+        const block = PLACEABLE_BLOCKS[this.selectedSlot] ?? BlockId.Glass;
+        const bx = Math.floor(p.x);
+        const by = Math.floor(p.y + 0.1);
+        const bz = Math.floor(p.z);
+        let built = 0;
+        for (let dx = -r; dx <= r; dx++) {
+          for (let dz = -r; dz <= r; dz++) {
+            for (let dy = -1; dy <= r; dy++) {
+              const shell = Math.abs(dx) === r || Math.abs(dz) === r || dy === -1 || dy === r;
+              if (!shell) continue;
+              if (this.world.applyBlockChange(bx + dx, by + dy, bz + dz, block)) built++;
+            }
+          }
+        }
+        this.ui.printConsole(`用手里方块搭了一个半径 ${r} 的房间（${built} 格）`, 'ok');
+        break;
+      }
+      case 'tnt': {
+        const bx = Math.floor(p.x) + 1;
+        const by = Math.floor(p.y + 0.1);
+        const bz = Math.floor(p.z);
+        if (this.world.applyBlockChange(bx, by, bz, BlockId.Tnt)) this.igniteTnt(bx, by, bz);
+        this.ui.printConsole('TNT 已点燃，快跑！', 'ok');
+        break;
+      }
+      case 'undo':
+      case '撤销':
+        this.undo();
+        this.ui.printConsole('撤销了一步', 'ok');
         break;
       default:
         this.ui.printConsole(`未知命令: ${cmd}，输入 help 查看`, 'error');
@@ -710,6 +853,7 @@ export class Game {
       if (this.nextRoundTimer <= 0) this.beginNextRound();
     }
 
+    this.tickCommandBlocks();
     this.updateHud();
   }
 
@@ -845,6 +989,10 @@ export class Game {
     if (hit) {
       this.highlight.visible = true;
       this.highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      if (this.input.wasPressed('KeyE') && this.world.getBlock(hit.x, hit.y, hit.z) === BlockId.CommandBlock) {
+        this.openBlockEditor(hit.x, hit.y, hit.z);
+        return;
+      }
     } else {
       this.highlight.visible = false;
     }
@@ -863,6 +1011,12 @@ export class Game {
   private breakBlock(x: number, y: number, z: number): void {
     const id = this.world.getBlock(x, y, z);
     if (id === BlockId.Air) return;
+
+    if (id === BlockId.CommandBlock) {
+      const key = `${x},${y},${z}`;
+      this.commandBlocks.delete(key);
+      this.commandCooldown.delete(key);
+    }
 
     if (id === BlockId.Tnt) {
       this.igniteTnt(x, y, z);
@@ -1060,6 +1214,7 @@ export class Game {
         this.world.getAllChunks(),
         { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
         this.world.seed,
+        Object.fromEntries(this.commandBlocks),
       );
       this.editsSinceSave = 0;
     } catch {

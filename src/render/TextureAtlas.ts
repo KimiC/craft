@@ -288,6 +288,27 @@ const PAINTERS: Painter[] = [
     p.rect(TILE - 1, 0, 1, TILE, '#254f92');
     for (let y = 3; y < TILE - 2; y += 4) p.rect(2, y, TILE - 4, 1, '#3f79cc');
   },
+  // 26 command block — slate plate with an orange ">" so it is obviously not a
+  // building material in the hotbar
+  (p) => {
+    p.fill('#3c4150');
+    p.mottle(['#343947', '#474d5e'], 26, 2100);
+    p.rect(0, 0, TILE, 1, '#2b2f3b');
+    p.rect(0, TILE - 1, TILE, 1, '#2b2f3b');
+    p.rect(0, 0, 1, TILE, '#2b2f3b');
+    p.rect(TILE - 1, 0, 1, TILE, '#2b2f3b');
+    // chevron
+    for (let i = 0; i < 4; i++) {
+      p.px(4 + i, 5 + i, '#f0913c');
+      p.px(4 + i, 10 - i, '#f0913c');
+      p.px(5 + i, 5 + i, '#f0913c');
+      p.px(5 + i, 10 - i, '#f0913c');
+    }
+    p.px(11, 7, '#8a939f');
+    p.px(11, 8, '#8a939f');
+    p.px(12, 7, '#8a939f');
+    p.px(12, 8, '#8a939f');
+  },
 ];
 
 /** Procedurally generated 16x16 block texture atlas. */

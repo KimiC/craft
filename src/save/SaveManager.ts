@@ -17,6 +17,8 @@ interface SavePayload {
   seed: number;
   playerPos: { x: number; y: number; z: number };
   chunks: ChunkPayload[];
+  /** Command text for command blocks, keyed "x,y,z" (v3+). */
+  commands?: Record<string, string>;
   savedAt: number;
 }
 
@@ -45,6 +47,7 @@ export class SaveManager {
     chunks: Chunk[],
     playerPos: { x: number; y: number; z: number },
     seed: number,
+    commands: Record<string, string> = {},
   ): Promise<void> {
     if (!this.db) await this.init();
     const payload: SavePayload = {
@@ -56,6 +59,7 @@ export class SaveManager {
         cz: c.cz,
         data: new Uint8Array(c.serialize()),
       })),
+      commands,
       savedAt: Date.now(),
     };
 
@@ -71,6 +75,7 @@ export class SaveManager {
     chunks: Chunk[];
     playerPos: { x: number; y: number; z: number };
     seed: number;
+    commands: Record<string, string>;
   } | null> {
     if (!this.db) await this.init();
 
@@ -96,6 +101,7 @@ export class SaveManager {
           chunks,
           playerPos: payload.playerPos,
           seed: payload.seed ?? 42,
+          commands: payload.commands ?? {},
         });
       };
       req.onerror = () => reject(req.error);

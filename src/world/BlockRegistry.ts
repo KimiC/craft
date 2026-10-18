@@ -25,6 +25,7 @@ export enum BlockId {
   Ice = 18,
   Snow = 19,
   Obsidian = 20,
+  CommandBlock = 21,
 }
 
 export interface BlockDef {
@@ -62,6 +63,14 @@ export const BLOCKS: Record<BlockId, BlockDef> = {
   [BlockId.Ice]: { id: BlockId.Ice, name: 'Ice', solid: true, transparent: true, hardness: 0.5, textures: T(21) },
   [BlockId.Snow]: { id: BlockId.Snow, name: 'Snow', solid: true, transparent: false, hardness: 0.3, textures: T(22) },
   [BlockId.Obsidian]: { id: BlockId.Obsidian, name: 'Obsidian', solid: true, transparent: false, hardness: 4, textures: T(24) },
+  [BlockId.CommandBlock]: {
+    id: BlockId.CommandBlock,
+    name: 'Command Block',
+    solid: true,
+    transparent: false,
+    hardness: 0.6,
+    textures: T(26),
+  },
 };
 
 /** Hotbar order — first nine are reachable with number keys 1-9. */
@@ -85,6 +94,7 @@ export const PLACEABLE_BLOCKS: BlockId[] = [
   BlockId.GoldOre,
   BlockId.Obsidian,
   BlockId.Tnt,
+  BlockId.CommandBlock,
 ];
 
 export function getBlock(id: number): BlockDef {
