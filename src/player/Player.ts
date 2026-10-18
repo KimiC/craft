@@ -15,6 +15,13 @@ export interface MoveInput {
 
 const P = CONFIG.player;
 
+/** Move `current` toward `target` by at most `maxDelta`. */
+function approach(current: number, target: number, maxDelta: number): number {
+  if (current < target) return Math.min(current + maxDelta, target);
+  if (current > target) return Math.max(current - maxDelta, target);
+  return target;
+}
+
 export class Player {
   position = new THREE.Vector3(8, 40, 8);
   velocity = new THREE.Vector3();
@@ -55,8 +62,6 @@ export class Player {
     this.inWater = this.checkWater();
     const speed =
       P.walkSpeed * (input.sprint && moving ? P.sprintMultiplier : 1) * (this.inWater ? 0.62 : 1);
-    this.velocity.x = move.x * speed;
-    this.velocity.z = move.z * speed;
 
     const wasOnGround = this.onGround;
 
@@ -84,6 +89,18 @@ export class Player {
       this.velocity.y += P.gravity * dt;
       if (!this.onGround) this.impactSpeed = Math.max(this.impactSpeed, -this.velocity.y);
     }
+
+    // Accelerate toward the requested velocity instead of snapping to it.
+    // Computed *after* the jump so the frame you launch is already treated as
+    // airborne — otherwise that one frame brakes with ground friction and eats
+    // a chunk of the speed you jumped with.
+    const airborne = !this.onGround && !this.inWater;
+    let rate: number;
+    if (this.inWater) rate = moving ? P.airAccel : P.waterFriction;
+    else if (airborne) rate = moving ? P.airAccel : P.airFriction;
+    else rate = moving ? P.groundAccel : P.groundFriction;
+    this.velocity.x = approach(this.velocity.x, move.x * speed, rate * dt);
+    this.velocity.z = approach(this.velocity.z, move.z * speed, rate * dt);
 
     this.moveAxis('x', this.velocity.x * dt);
     this.moveAxis('z', this.velocity.z * dt);

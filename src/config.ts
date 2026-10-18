@@ -27,6 +27,16 @@ export const CONFIG = {
     gravity: -28,
     flySpeed: 12,
     flySprintMultiplier: 2.2,
+    /** How quickly you reach full speed on the ground (m/s²). Higher = snappier. */
+    groundAccel: 55,
+    /** How quickly you stop on the ground when every key is released (m/s²). */
+    groundFriction: 32,
+    /** Air steering authority (m/s²). Keep it low so a jump keeps its momentum. */
+    airAccel: 14,
+    /** Air drag (m/s²). Near zero: you coast through the whole jump. */
+    airFriction: 0.6,
+    /** Extra drag while swimming (m/s²). */
+    waterFriction: 12,
     /** Grace period to still jump after walking off a ledge (seconds) */
     coyoteTime: 0.12,
     /** Press jump slightly before landing and it still counts (seconds) */
