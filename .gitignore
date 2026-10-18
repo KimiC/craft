@@ -4,3 +4,5 @@ dist/
 .DS_Store
 voxel.zip
 voxel.tar.gz
+dist-kimic/
+
