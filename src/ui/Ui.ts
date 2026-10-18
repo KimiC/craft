@@ -144,7 +144,19 @@ export class Ui {
   }
 
   // ---------- feedback ----------
+  private lastToastText = '';
+  private lastToastAt = 0;
+
   toast(text: string, kind: 'gold' | 'green' | 'boom' | '' = ''): void {
+    const now = performance.now();
+    // Collapse repeats (a chain of explosions would otherwise stack a wall of
+    // identical banners) and never show more than a handful at once.
+    if (text === this.lastToastText && now - this.lastToastAt < 900) return;
+    this.lastToastText = text;
+    this.lastToastAt = now;
+
+    while (this.toastBox.children.length >= 5) this.toastBox.firstElementChild?.remove();
+
     const el = document.createElement('div');
     el.className = 'toast' + (kind ? ` ${kind}` : '');
     el.textContent = text;

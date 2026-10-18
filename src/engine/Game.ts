@@ -721,6 +721,13 @@ export class Game {
     const destroyed: { x: number; y: number; z: number; id: number }[] = [];
     let chain = false;
 
+    // The charge at the centre is consumed by its own blast. Without this the
+    // scan below finds that same TNT block and queues the explosion again,
+    // forever — which is exactly the runaway "chain reaction" loop.
+    if (this.world.getBlock(cx, cy, cz) === BlockId.Tnt) {
+      this.world.applyBlockChange(cx, cy, cz, BlockId.Air);
+    }
+
     for (let dx = -4; dx <= 4; dx++) {
       for (let dy = -4; dy <= 4; dy++) {
         for (let dz = -4; dz <= 4; dz++) {
@@ -731,8 +738,11 @@ export class Game {
           const id = this.world.getBlock(x, y, z);
           if (id === BlockId.Air || id === BlockId.Water) continue;
           if (id === BlockId.Tnt) {
-            this.booms.push({ x, y, z, t: 0.12 + Math.random() * 0.18 });
             chain = true;
+            // Two blasts can reach the same charge; queue it once.
+            if (!this.booms.some((b) => b.x === x && b.y === y && b.z === z)) {
+              this.booms.push({ x, y, z, t: 0.12 + Math.random() * 0.18 });
+            }
             continue;
           }
           this.world.applyBlockChange(x, y, z, BlockId.Air);
